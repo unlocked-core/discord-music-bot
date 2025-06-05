@@ -1,0 +1,33 @@
+{
+  "name": "discord-music-bot",
+  "version": "1.0.0",
+  "description": "Discord музыкальный бот для воспроизведения музыки с YouTube",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "keywords": [
+    "discord",
+    "bot",
+    "music",
+    "youtube"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@discordjs/voice": "^0.17.0",
+    "@distube/ytdl-core": "^4.16.11",
+    "discord.js": "^14.14.1",
+    "dotenv": "^16.5.0",
+    "ffmpeg-static": "^5.2.0",
+    "libsodium-wrappers": "^0.7.11",
+    "ytdl-core": "^4.11.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
