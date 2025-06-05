@@ -53,12 +53,10 @@ class Queue {
   }
 }
 
-// Простая проверка ютуб ссылки
 const isYouTube = (url) => {
   return /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)/.test(url);
 };
 
-// Получаем инфу о треке
 const getTrackInfo = async (url) => {
   try {
     const info = await ytdl.getInfo(url);
@@ -66,7 +64,7 @@ const getTrackInfo = async (url) => {
       title: info.videoDetails.title,
       url: url,
       duration: parseInt(info.videoDetails.lengthSeconds),
-      requester: null, // будем добавлять позже
+      requester: null,
     };
   } catch (err) {
     console.log("Не удалось получить инфо:", err.message);
@@ -74,10 +72,18 @@ const getTrackInfo = async (url) => {
   }
 };
 
-// Основная функция проигрывания
+const safeSend = async (channel, content) => {
+  try {
+    return await channel.send(content);
+  } catch (error) {
+    console.log("Ошибка отправки сообщения:", error.message);
+    return null;
+  }
+};
+
 const play = async (queue, channel) => {
   if (queue.length === 0) {
-    channel.send("Очередь закончилась, отключаюсь...");
+    await safeSend(channel, "Очередь закончилась, отключаюсь");
     queue.destroy();
     queues.delete(queue.guild);
     return;
@@ -98,8 +104,7 @@ const play = async (queue, channel) => {
     queue.playing = true;
   } catch (error) {
     console.log("Ошибка воспроизведения:", error.message);
-    channel.send("Что-то пошло не так с этим треком, пропускаю...");
-    // Рекурсивно пробуем следующий
+    await safeSend(channel, "Что-то пошло не так с этим треком");
     play(queue, channel);
   }
 };
@@ -123,7 +128,7 @@ client.on("messageCreate", async (msg) => {
     case "p": {
       const voiceChannel = msg.member?.voice?.channel;
       if (!voiceChannel) {
-        return msg.reply("Зайди в голосовой канал сначала!");
+        return msg.reply("Зайди в голосовой канал");
       }
 
       const url = args[0];
@@ -132,7 +137,7 @@ client.on("messageCreate", async (msg) => {
       }
 
       if (!isYouTube(url)) {
-        return msg.reply("Только ютуб ссылки работают!");
+        return msg.reply("Только c ютуб!");
       }
 
       const trackInfo = await getTrackInfo(url);
@@ -166,7 +171,7 @@ client.on("messageCreate", async (msg) => {
 
           queue.player.on("error", (err) => {
             console.log("Player error:", err);
-            msg.channel.send("Ошибка плеера");
+            safeSend(msg.channel, "Ошибка плеера");
           });
 
           connection.on(VoiceConnectionStatus.Disconnected, () => {
@@ -185,7 +190,7 @@ client.on("messageCreate", async (msg) => {
         play(queue, msg.channel);
       } else {
         msg.reply(
-          `Добавил в очередь: **${trackInfo.title}** (позиция ${queue.length})`
+          `Добавил в очередь: **${trackInfo.title}** (номер ${queue.length})`
         );
       }
       break;
@@ -243,40 +248,61 @@ client.on("messageCreate", async (msg) => {
 
     case "help":
     case "h": {
-      const embed = {
-        color: 0x0099ff,
-        title: "Команды бота",
-        fields: [
-          {
-            name: "Воспроизведение",
-            value:
-              "`!play <ссылка>` - добавить трек\n`!p <ссылка>` - короткая версия",
-            inline: true,
+      const canEmbed = msg.channel
+        .permissionsFor(msg.guild.members.me)
+        ?.has("EmbedLinks");
+
+      if (canEmbed) {
+        const embed = {
+          color: 0x0099ff,
+          title: "Команды бота",
+          fields: [
+            {
+              name: "Воспроизведение",
+              value: "`!play <ссылка>` - добавить трек",
+              inline: true,
+            },
+            {
+              name: "Управление",
+              value:
+                "`!skip` - пропустить\n`!stop` - остановить\n`!queue` - показать очередь",
+              inline: true,
+            },
+          ],
+          footer: {
+            text: "Работает только с YouTube",
           },
-          {
-            name: "Управление",
-            value:
-              "`!skip` - пропустить\n`!stop` - остановить\n`!queue` - показать очередь",
-            inline: true,
-          },
-        ],
-        footer: {
-          text: "Работает только с YouTube",
-        },
-      };
-      msg.reply({ embeds: [embed] });
+        };
+        msg.reply({ embeds: [embed] });
+      } else {
+        const helpText = `**Команды бота:**
+
+**Воспроизведение:**
+\`!play <ссылка>\` - добавить трек
+\`!p <ссылка>\` -    добавить трек
+
+**Управление:**
+\`!skip\` -  пропустить
+\`!s\` -     пропустить
+
+\`!stop\` -  остановить
+
+\`!queue\` - показать очередь
+\`!q\` -     показать очередь
+
+Работает только с YouTube`;
+        msg.reply(helpText);
+      }
       break;
     }
   }
 });
 
-// Обработка ошибок
 client.on("error", console.error);
 process.on("unhandledRejection", (err) => {
   console.error("Unhandled promise rejection:", err);
 });
 
-// Проверяем токен
 if (!process.env.DISCORD_TOKEN) {
   console.error(" Нет токена в .env файле!");
   process.exit(1);

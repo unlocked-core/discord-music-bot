@@ -27,3 +27,12 @@ Thumbs.db
 
 # Кэш
 .cache/
+
+# Docker
+logs/
+docker-compose.override.yml
+.docker/
+
+# Деплой скрипты (опционально)
+# deploy.sh
+# deploy.ps1
